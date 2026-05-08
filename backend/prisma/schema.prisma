@@ -1,0 +1,287 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User — Central entity for all actors
+model User {
+  id            BigInt    @id @default(autoincrement())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(USER) // USER, STUDENT, TEACHER, ADMIN
+  avatarUrl     String?
+  bio           String?
+  createdAt     DateTime  @default(now())
+  
+  projects      Project[]
+  comments      Comment[]
+  ratings       Rating[]
+  taughtClasses Class[]       @relation("TeacherClasses")
+  enrollments   ClassEnrollment[]
+  submissions   Submission[]
+  battleSubmissions BattleSubmission[]
+  arenaRanking  ArenaRanking?
+  badges        UserBadge[]
+  
+  // Arena
+  battlesAsPlayerA Battle[]  @relation("PlayerA")
+  battlesAsPlayerB Battle[]  @relation("PlayerB")
+  battlesWon        Battle[]  @relation("Winner")
+  createdChallenges Challenge[]
+}
+
+enum Role {
+  USER
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+// Project — Public community submissions
+model Project {
+  id              BigInt    @id @default(autoincrement())
+  userId          BigInt
+  title           String
+  description     String
+  zipPath         String?
+  githubUrl       String?
+  liveUrl         String?
+  language        String?
+  tags            Json?
+  aiFeedback      String?   @db.Text
+  aiScore         Int?
+  aiAnalysisJson  Json?
+  viewsCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id])
+  comments        Comment[]
+  ratings         Rating[]
+  battleSubmissions BattleSubmission[]
+}
+
+// Comment — Threaded discussions
+model Comment {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt
+  projectId   BigInt
+  parentId    BigInt?
+  content     String    @db.Text
+  helpfulCount Int      @default(0)
+  isReported  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  user        User      @relation(fields: [userId], references: [id])
+  project     Project   @relation(fields: [projectId], references: [id])
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentReplies")
+}
+
+// Rating — 1-5 star ratings
+model Rating {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  projectId BigInt
+  score     Int      // 1-5
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+  
+  @@unique([userId, projectId])
+}
+
+// Class — Teacher-created group
+model Class {
+  id          BigInt    @id @default(autoincrement())
+  teacherId   BigInt
+  name        String
+  description String?   @db.Text
+  inviteCode  String    @unique // 6 characters
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  
+  teacher     User      @relation("TeacherClasses", fields: [teacherId], references: [id])
+  enrollments ClassEnrollment[]
+  assignments Assignment[]
+}
+
+// ClassEnrollment — Many-to-many pivot
+model ClassEnrollment {
+  id        BigInt   @id @default(autoincrement())
+  classId   BigInt
+  studentId BigInt
+  enrolledAt DateTime @default(now())
+  
+  class     Class    @relation(fields: [classId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
+  
+  @@unique([classId, studentId])
+}
+
+// Assignment — Teacher-published task
+model Assignment {
+  id          BigInt    @id @default(autoincrement())
+  classId     BigInt
+  title       String
+  description String    @db.Text
+  deadline    DateTime?
+  maxScore    Int       @default(20)
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  class       Class     @relation(fields: [classId], references: [id])
+  submissions Submission[]
+}
+
+// Submission — Student work with dual evaluation
+model Submission {
+  id               BigInt    @id @default(autoincrement())
+  assignmentId     BigInt
+  studentId        BigInt
+  filePath         String?
+  codeContent      String?   @db.LongText
+  notes            String?   @db.Text
+  submittedAt      DateTime  @default(now())
+  isLate           Boolean   @default(false)
+  aiFeedback       String?   @db.Text
+  aiScore          Int?
+  aiAnalysisJson   Json?
+  teacherScore     Decimal?  @db.Decimal(5,2)
+  teacherComment   String?   @db.Text
+  gradedAt         DateTime?
+  
+  assignment       Assignment @relation(fields: [assignmentId], references: [id])
+  student          User       @relation(fields: [studentId], references: [id])
+  
+  @@unique([assignmentId, studentId])
+}
+
+// Badge — Achievement badges
+model Badge {
+  id          BigInt   @id @default(autoincrement())
+  name        String
+  description String
+  icon        String
+  criteria    Json
+  
+  users       UserBadge[]
+}
+
+// UserBadge — Pivot
+model UserBadge {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  badgeId   BigInt
+  awardedAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+  
+  @@unique([userId, badgeId])
+}
+
+// ── ARENA TABLES ──
+
+// Challenge — Arena challenge prompt
+model Challenge {
+  id          BigInt    @id @default(autoincrement())
+  creatorId   BigInt?
+  title       String
+  prompt      String    @db.Text
+  language    String    @default("any") // "any" or specific language
+  duration    Duration  @default(STANDARD) // QUICK(2h), STANDARD(48h), ROYALE(1w)
+  difficulty  Difficulty @default(INTERMEDIATE)
+  createdAt   DateTime  @default(now())
+  
+  creator     User?     @relation(fields: [creatorId], references: [id])
+  battles     Battle[]
+}
+
+enum Duration {
+  QUICK
+  STANDARD
+  ROYALE
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Battle — Head-to-head coding battle
+model Battle {
+  id            BigInt      @id @default(autoincrement())
+  challengeId   BigInt
+  playerAId     BigInt
+  playerBId     BigInt
+  status        BattleStatus @default(PENDING) // PENDING, ACTIVE, JUDGING, COMPLETE
+  winnerId      BigInt?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  createdAt     DateTime    @default(now())
+  
+  challenge     Challenge   @relation(fields: [challengeId], references: [id])
+  playerA       User        @relation("PlayerA", fields: [playerAId], references: [id])
+  playerB       User        @relation("PlayerB", fields: [playerBId], references: [id])
+  winner        User?       @relation("Winner", fields: [winnerId], references: [id])
+  submissions   BattleSubmission[]
+}
+
+enum BattleStatus {
+  PENDING
+  ACTIVE
+  JUDGING
+  COMPLETE
+}
+
+// BattleSubmission — A player's submission in a battle
+model BattleSubmission {
+  id          BigInt   @id @default(autoincrement())
+  battleId    BigInt
+  userId      BigInt
+  projectId   BigInt
+  aiScore     Int?
+  communityVotes Int   @default(0)
+  createdAt   DateTime  @default(now())
+  
+  battle      Battle   @relation(fields: [battleId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id])
+  
+  @@unique([battleId, userId])
+}
+
+// ArenaRanking — Player's competitive ranking
+model ArenaRanking {
+  id          BigInt   @id @default(autoincrement())
+  userId      BigInt   @unique
+  tier        ArenaTier @default(BRONZE)
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  winStreak   Int      @default(0)
+  reputation  Int      @default(0)
+  season      String   // e.g., "2026-Q1"
+  
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+enum ArenaTier {
+  BRONZE
+  SILVER
+  GOLD
+  DIAMOND
+  MASTER
+}
