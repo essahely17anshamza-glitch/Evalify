@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { extractZip, readExtractedFiles, cleanupTempFiles } from '../services/zipService.js';
-import { analyzeProject } from '../services/geminiService.js';
+import { analyzeProject } from '../services/aiService.js';
 
 const prisma = new PrismaClient();
 
@@ -77,6 +77,59 @@ export const submitProject = async (req, res, next) => {
   } catch (error) {
     console.error("Submit project error:", error);
     await cleanupTempFiles(zipPath, extractedDir);
+    next(error);
+  }
+};
+
+export const updateProject = async (req, res, next) => {
+  try {
+    const projectId = BigInt(req.params.id);
+    const existing = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!existing) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (String(existing.userId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'Not authorized to edit this project' });
+    }
+
+    const { title, description, language, githubUrl, liveUrl, tags } = req.body;
+    let tagsJson = undefined;
+    if (tags !== undefined) {
+      if (typeof tags === 'string') {
+        try { tagsJson = JSON.parse(tags); } catch (e) { tagsJson = [tags]; }
+      } else if (Array.isArray(tags)) {
+        tagsJson = tags;
+      }
+    }
+
+    const updated = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        title: title ?? existing.title,
+        description: description ?? existing.description,
+        language: language ?? existing.language,
+        githubUrl: githubUrl ?? existing.githubUrl,
+        liveUrl: liveUrl ?? existing.liveUrl,
+        tags: tagsJson !== undefined ? tagsJson : existing.tags,
+      }
+    });
+
+    res.json({ success: true, data: JSON.parse(JSON.stringify(updated, bigintReplacer)) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteProject = async (req, res, next) => {
+  try {
+    const projectId = BigInt(req.params.id);
+    const existing = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!existing) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (String(existing.userId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this project' });
+    }
+
+    await prisma.project.delete({ where: { id: projectId } });
+    res.json({ success: true, message: 'Project deleted successfully' });
+  } catch (error) {
     next(error);
   }
 };

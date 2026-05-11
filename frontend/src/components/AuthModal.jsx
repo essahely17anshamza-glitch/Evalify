@@ -142,7 +142,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         .input-field {
           width: 100%; padding: 0.75rem;
           background: var(--bg-hover); border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); color: white;
+          border-radius: var(--radius-sm); color: var(--text-primary);
           font-family: inherit;
         }
         .input-field:focus {

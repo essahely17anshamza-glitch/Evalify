@@ -46,6 +46,56 @@ export const getAssignments = async (req, res, next) => {
   }
 };
 
+export const updateAssignment = async (req, res, next) => {
+  try {
+    const assignmentId = BigInt(req.params.id);
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: { class: { select: { teacherId: true } } }
+    });
+
+    if (!assignment) return res.status(404).json({ success: false, error: 'Assignment not found' });
+    if (String(req.user.id) !== String(assignment.class.teacherId) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'Not authorized to update this assignment' });
+    }
+
+    const { title, description, maxScore, deadline } = req.body;
+    const updated = await prisma.assignment.update({
+      where: { id: assignmentId },
+      data: {
+        title: title ?? assignment.title,
+        description: description ?? assignment.description,
+        maxScore: maxScore !== undefined ? parseInt(maxScore, 10) || assignment.maxScore : assignment.maxScore,
+        deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : assignment.deadline,
+      }
+    });
+
+    res.json({ success: true, data: JSON.parse(JSON.stringify(updated, bigintReplacer)) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAssignment = async (req, res, next) => {
+  try {
+    const assignmentId = BigInt(req.params.id);
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: { class: { select: { teacherId: true } } }
+    });
+
+    if (!assignment) return res.status(404).json({ success: false, error: 'Assignment not found' });
+    if (String(req.user.id) !== String(assignment.class.teacherId) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this assignment' });
+    }
+
+    await prisma.assignment.delete({ where: { id: assignmentId } });
+    res.json({ success: true, message: 'Assignment deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAssignmentDetails = async (req, res, next) => {
   try {
     const assignmentId = BigInt(req.params.id);

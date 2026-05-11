@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { register, login, logout, getMe } from '../controllers/authController.js';
-import { submitProject, getProjects, getProject, getUserProfile } from '../controllers/projectController.js';
+import { getUserProfile } from '../controllers/userController.js';
+import { submitProject, getProjects, getProject, updateProject, deleteProject } from '../controllers/projectController.js';
 import { createClass, joinClass, getClasses, getClassDetails } from '../controllers/classController.js';
-import { createAssignment, getAssignments, getAssignmentDetails } from '../controllers/assignmentController.js';
+import { createAssignment, getAssignments, getAssignmentDetails, updateAssignment, deleteAssignment } from '../controllers/assignmentController.js';
 import { submitAssignment, getSubmissionsForAssignment, gradeSubmission, getSubmissionDetails } from '../controllers/submissionController.js';
 import { createChallenge, getChallenges, initiateBattle, getBattles, getBattleDetails, submitBattleProject, compareBattle } from '../controllers/arenaController.js';
 import { quickAnalyze, getAnalysisStatus } from '../controllers/analyzeController.js';
@@ -20,16 +21,41 @@ router.get('/health', (req, res) => {
   res.json({ success: true, message: 'Evalify API is running' });
 });
 
+// AI Test - Diagnostic endpoint
+router.get('/health/ai-test', async (req, res) => {
+  try {
+    const { callAI } = await import('../services/providers/' + (process.env.AI_PROVIDER || 'groq') + '.js');
+    const testPrompt = 'Return exactly this JSON: {"test": "success"}';
+    const response = await callAI(testPrompt);
+    res.json({ 
+      success: true, 
+      provider: process.env.AI_PROVIDER || 'groq',
+      response 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      provider: process.env.AI_PROVIDER || 'groq',
+      error: error.message 
+    });
+  }
+});
+
 // Auth Routes
 router.post('/auth/register', register);
 router.post('/auth/login', login);
 router.post('/auth/logout', isAuthenticated, logout);
 router.get('/auth/me', isAuthenticated, getMe);
 
+// User Routes
+router.get('/users/:id', getUserProfile);
+
 // Project Routes
 router.post('/projects/analyze', isAuthenticated, upload.single('projectFile'), submitProject);
 router.get('/projects', getProjects);
 router.get('/projects/:id', getProject);
+router.patch('/projects/:id', isAuthenticated, updateProject);
+router.delete('/projects/:id', isAuthenticated, deleteProject);
 router.post('/projects/:id/rate', isAuthenticated, rateProject);
 router.get('/projects/:id/ratings', getRatings);
 router.post('/projects/:id/comments', isAuthenticated, addComment);
@@ -48,6 +74,8 @@ router.get('/classes/:id', isAuthenticated, getClassDetails);
 router.post('/classes/:classId/assignments', isAuthenticated, isTeacher, createAssignment);
 router.get('/classes/:classId/assignments', isAuthenticated, getAssignments);
 router.get('/assignments/:id', isAuthenticated, getAssignmentDetails);
+router.patch('/assignments/:id', isAuthenticated, isTeacher, updateAssignment);
+router.delete('/assignments/:id', isAuthenticated, isTeacher, deleteAssignment);
 
 // Submission Routes
 router.post('/assignments/:id/submit', isAuthenticated, upload.single('projectFile'), submitAssignment);

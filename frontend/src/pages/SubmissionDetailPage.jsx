@@ -9,7 +9,7 @@ import {
   TrendingUp, Code, Save, User
 } from 'lucide-react';
 
-const SubmissionDetailPage = () => {
+const SubmissionDetailPage = ({ setLogoStatus }) => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -48,9 +48,11 @@ const SubmissionDetailPage = () => {
         teacherComment: grade.teacherComment
       });
       await fetchSubmission();
+      setLogoStatus?.('graded');
       alert("Grade saved successfully!");
     } catch (err) {
       setError(err.response?.data?.error || "Failed to save grade.");
+      setLogoStatus?.('error');
     } finally {
       setGrading(false);
     }
@@ -125,7 +127,7 @@ const SubmissionDetailPage = () => {
               <div className="terminal-dot" style={{ background: '#27C93F' }} />
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>gemini-review.md</span>
             </div>
-            <div className="terminal-body" style={{ maxHeight: '500px', overflowY: 'auto', whiteSpace: 'pre-wrap', color: '#C9D1D9', lineHeight: 1.6 }}>
+            <div className="terminal-body" style={{ maxHeight: '500px', overflowY: 'auto', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               {submission.aiFeedback || 'AI Analysis pending...'}
             </div>
           </div>

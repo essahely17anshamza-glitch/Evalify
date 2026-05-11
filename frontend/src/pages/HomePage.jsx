@@ -81,21 +81,7 @@ export default function HomePage({ onOpenAuth, onOpenSubmit, user }) {
               <Code size={16} /> Browse Projects
             </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '2.5rem' }}>
-            {[...Array(5)].map((_, i) => <Star key={i} size={13} fill="var(--accent-warm)" color="var(--accent-warm)" />)}
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loved by developers worldwide</span>
-          </div>
         </motion.div>
-      </section>
-
-      {/* ── Stats Bar ── */}
-      <section style={{ borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '2.5rem 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '2rem', textAlign: 'center', background: 'rgba(21,21,21,0.5)' }}>
-        {[{ label: 'Projects Reviewed', target: 12480, suffix: '+' }, { label: 'Battles Fought', target: 3201, suffix: '+' }, { label: 'Developers', target: 2890, suffix: '+' }, { label: 'AI Reviews/Day', target: 540, suffix: '+' }].map(({ label, target, suffix }) => (
-          <div key={label}>
-            <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1 }} className="text-gradient"><Counter target={target} suffix={suffix} /></div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.4rem' }}>{label}</div>
-          </div>
-        ))}
       </section>
 
       {/* ── Features ── */}

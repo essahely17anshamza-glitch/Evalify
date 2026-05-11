@@ -43,7 +43,7 @@ const ScoreCircle = ({ score, size = 100 }) => {
   );
 };
 
-const BattleDetailPage = () => {
+const BattleDetailPage = ({ setLogoStatus }) => {
   const { id } = useParams();
   const { user } = useAuth();
   const [battle, setBattle] = useState(null);
@@ -69,6 +69,7 @@ const BattleDetailPage = () => {
     if (!file.name.endsWith('.zip')) { setUploadError('Please upload a .zip file.'); return; }
 
     setUploading(true); setUploadError('');
+    setLogoStatus?.('analyzing');
     try {
       const formData = new FormData();
       formData.append('title', `Battle: ${battle.challenge.title}`);
@@ -78,8 +79,10 @@ const BattleDetailPage = () => {
       await arenaService.submitBattle(id, formData);
       setUploadSuccess(true);
       fetchBattle();
+      setLogoStatus?.('battle');
     } catch (err) {
       setUploadError(err.response?.data?.error || 'Upload failed. Please try again.');
+      setLogoStatus?.('error');
     } finally { setUploading(false); }
   };
 
@@ -98,9 +101,22 @@ const BattleDetailPage = () => {
     </div>
   );
 
-  const isParticipant = user && (String(user.id) === String(battle.playerAId) || String(user.id) === String(battle.playerBId));
+  const isParticipant = user && battle && (String(user.id) === String(battle.playerAId) || String(user.id) === String(battle.playerBId));
   const hasSubmitted = battle.submissions?.some(s => String(s.userId) === String(user?.id));
   const statusCfg = STATUS_CONFIG[battle.status] || STATUS_CONFIG.PENDING;
+
+  useEffect(() => {
+    if (!battle) return;
+    if (battle.status === 'ACTIVE' && isParticipant) {
+      setLogoStatus?.('battle');
+    } else if (battle.status === 'JUDGING') {
+      setLogoStatus?.('analyzing');
+    } else if (battle.status === 'COMPLETE' && isParticipant) {
+      setLogoStatus?.(String(battle.winnerId) === String(user?.id) ? 'victory' : 'defeat');
+    } else {
+      setLogoStatus?.('idle');
+    }
+  }, [battle, isParticipant, user?.id, setLogoStatus]);
 
   const subA = battle.submissions?.find(s => String(s.userId) === String(battle.playerAId));
   const subB = battle.submissions?.find(s => String(s.userId) === String(battle.playerBId));
@@ -163,7 +179,7 @@ const BattleDetailPage = () => {
         </div>
         <div className="terminal-body">
           <div style={{ color: 'var(--accent-lavender)', marginBottom: '0.5rem', fontWeight: 700 }}># {battle.challenge?.title}</div>
-          <div style={{ whiteSpace: 'pre-wrap', color: '#C9D1D9' }}>{battle.challenge?.prompt}</div>
+          <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{battle.challenge?.prompt}</div>
         </div>
       </div>
 

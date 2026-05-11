@@ -34,6 +34,8 @@ export const projectService = {
   analyze: (formData) => api.post('/projects/analyze', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }).then(res => res.data),
+  updateProject: (id, data) => api.patch(`/projects/${id}`, data).then(res => res.data),
+  deleteProject: (id) => api.delete(`/projects/${id}`).then(res => res.data),
 };
 
 export const classService = {
@@ -42,6 +44,8 @@ export const classService = {
   createClass: (data) => api.post('/classes', data).then(res => res.data),
   joinClass: (inviteCode) => api.post('/classes/join', { inviteCode }).then(res => res.data),
   createAssignment: (classId, data) => api.post(`/classes/${classId}/assignments`, data).then(res => res.data),
+  updateAssignment: (assignmentId, data) => api.patch(`/assignments/${assignmentId}`, data).then(res => res.data),
+  deleteAssignment: (assignmentId) => api.delete(`/assignments/${assignmentId}`).then(res => res.data),
   submitAssignment: (assignmentId, formData) => api.post(`/assignments/${assignmentId}/submit`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }).then(res => res.data),

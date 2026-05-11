@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { extractZip, readExtractedFiles, cleanupTempFiles } from '../services/zipService.js';
-import { analyzeProject, compareSubmissions } from '../services/geminiService.js';
+import { analyzeProject, compareSubmissions } from '../services/aiService.js';
 
 const prisma = new PrismaClient();
 const bigintReplacer = (key, value) => typeof value === 'bigint' ? value.toString() : value;

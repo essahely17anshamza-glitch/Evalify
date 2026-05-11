@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { projectService } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import {
   ArrowLeft, Star, MessageSquare, FolderGit, ExternalLink,
-  Code, ShieldCheck, Zap, TrendingUp, AlertTriangle, CheckCircle
+  Code, ShieldCheck, Zap, TrendingUp, AlertTriangle, CheckCircle,
+  Pencil, Trash2
 } from 'lucide-react';
 
 const ScoreRing = ({ score, size = 80 }) => {
@@ -44,15 +46,48 @@ const CategoryBar = ({ label, score, icon }) => {
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editData, setEditData] = useState({ title: '', description: '', language: '', githubUrl: '', liveUrl: '' });
 
   useEffect(() => {
     projectService.getProject(id)
-      .then(res => { setProject(res.data); setLoading(false); })
+      .then(project => {
+        setProject(project);
+        setEditData({
+          title: project.title || '',
+          description: project.description || '',
+          language: project.language || '',
+          githubUrl: project.githubUrl || '',
+          liveUrl: project.liveUrl || ''
+        });
+        setLoading(false);
+      })
       .catch(() => { setError('Project not found.'); setLoading(false); });
   }, [id]);
+
+  const handleUpdate = async () => {
+    setSaving(true);
+    try {
+      const updated = await projectService.updateProject(id, editData);
+      setProject(updated);
+      setIsEditing(false);
+      setError(null);
+    } catch (err) {
+      setError('Unable to update project.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFieldChange = (field, value) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
+  };
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -74,6 +109,43 @@ export default function ProjectDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      {isEditing && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 30, background: 'rgba(0, 0, 0, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div style={{ width: '100%', maxWidth: '680px', background: 'var(--bg)', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 24px 80px rgba(0,0,0,0.25)', position: 'relative' }}>
+            <button type="button" onClick={() => setIsEditing(false)} style={{ position: 'absolute', right: '1rem', top: '1rem', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            <h2 style={{ marginBottom: '1rem' }}>Edit Project</h2>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <label style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                Title
+                <input type="text" value={editData.title} onChange={e => handleFieldChange('title', e.target.value)} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--bg)', color: 'var(--text-primary)' }} />
+              </label>
+              <label style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                Description
+                <textarea value={editData.description} onChange={e => handleFieldChange('description', e.target.value)} rows={4} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--bg)', color: 'var(--text-primary)' }} />
+              </label>
+              <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
+                <label style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  Language
+                  <input type="text" value={editData.language} onChange={e => handleFieldChange('language', e.target.value)} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--bg)', color: 'var(--text-primary)' }} />
+                </label>
+                <label style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  GitHub URL
+                  <input type="text" value={editData.githubUrl} onChange={e => handleFieldChange('githubUrl', e.target.value)} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--bg)', color: 'var(--text-primary)' }} />
+                </label>
+              </div>
+              <label style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                Live Demo URL
+                <input type="text" value={editData.liveUrl} onChange={e => handleFieldChange('liveUrl', e.target.value)} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--bg)', color: 'var(--text-primary)' }} />
+              </label>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setIsEditing(false)} style={{ padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={handleUpdate} disabled={saving} style={{ padding: '0.8rem 1.25rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent-lavender)', color: 'white', cursor: 'pointer' }}>{saving ? 'Saving…' : 'Save Changes'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Back */}
       <Link to="/community" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
         <ArrowLeft size={16} /> Back to Community
@@ -116,6 +188,31 @@ export default function ProjectDetailPage() {
             {project.liveUrl && <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.4rem 0.9rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}><ExternalLink size={14} /> Live Demo</a>}
           </div>
         )}
+
+        {currentUser?.id === project.user?.id && (
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+              <Pencil size={14} /> Edit
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!window.confirm('Delete this project? This action cannot be undone.')) return;
+                try {
+                  await projectService.deleteProject(id);
+                  navigate('/community');
+                } catch (err) {
+                  setError('Unable to delete project.');
+                }
+              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger)', background: 'rgba(236, 72, 86, 0.08)', color: 'var(--danger)', cursor: 'pointer' }}>
+              <Trash2 size={14} /> Delete
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem', alignItems: 'start' }}>
@@ -128,7 +225,7 @@ export default function ProjectDetailPage() {
               <div className="terminal-dot" style={{ background: '#27C93F' }} />
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>gemini-review.md</span>
             </div>
-            <div className="terminal-body" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#C9D1D9', maxHeight: '480px', overflowY: 'auto' }}>
+            <div className="terminal-body" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text-secondary)', maxHeight: '480px', overflowY: 'auto' }}>
               {project.aiFeedback || 'No AI feedback available for this project.'}
             </div>
           </div>

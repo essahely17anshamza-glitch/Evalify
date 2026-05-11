@@ -182,3 +182,384 @@
     border-right-color: var(--border);
   }
 }
+
+.logo-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  font-weight: 800;
+  font-size: 1.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  letter-spacing: -0.02em;
+  padding: 0.35rem 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 20px 50px rgba(15, 23, 42, 0.30);
+  color: transparent;
+  background-image: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 45%, #f8fafc 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  position: relative;
+  overflow: visible;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.logo-text .logo-bracket {
+  color: #8A857D;
+  transition: color 0.25s ease;
+}
+
+.logo-text .logo-slash {
+  display: inline-block;
+  position: relative;
+  color: #f8fafc;
+  animation: slash-breathe 3s ease-in-out infinite;
+  transition: color 0.25s ease;
+}
+
+.logo-text .logo-tail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.06rem;
+}
+
+.logo-text .logo-status-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0;
+  transform: translateX(-8px) scale(0.85);
+  transition: opacity 0.3s ease, transform 0.35s ease;
+}
+
+.logo-text .logo-status-icon-wrapper svg {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}
+
+.logo-text--hover {
+  transform: translateY(-1px) scale(1.02);
+  border-color: #FF6B35;
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 53, 0.16), 0 24px 68px rgba(255, 107, 53, 0.16);
+}
+
+.logo-text--hover .logo-bracket,
+.logo-text--hover .logo-slash {
+  color: #FF6B35;
+}
+
+.logo-text--hover .logo-cursor {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  width: 1px;
+  height: 1rem;
+  transform: translateY(-50%);
+  background: #f8fafc;
+  opacity: 0;
+  animation: cursor-blink 1.5s steps(2, end) forwards;
+}
+
+.logo-text--hover .logo-slash::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -0.5rem;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ff6b35;
+  box-shadow: 0 0 10px rgba(255, 107, 53, 0.7);
+  animation: sparkle-ping 1.5s ease-out forwards;
+}
+
+.logo-text--hover .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--hover .logo-status-icon-wrapper svg path {
+  fill: #FF6B35;
+}
+
+.logo-text--analyzing {
+  border-color: #FF6B35;
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 53, 0.15), 0 20px 45px rgba(255, 107, 53, 0.15);
+}
+
+.logo-text--analyzing .logo-bracket,
+.logo-text--analyzing .logo-slash {
+  color: #FF6B35;
+}
+
+.logo-text--analyzing .logo-main {
+  opacity: 0.88;
+}
+
+.logo-text--analyzing .logo-loading-dots {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.2rem;
+}
+
+.logo-text--analyzing .logo-loading-dots span {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: #f8fafc;
+  opacity: 0.25;
+  animation: loading-dot 1.2s infinite ease-in-out;
+}
+
+.logo-text--analyzing .logo-loading-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.logo-text--analyzing .logo-loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.logo-text--analyzing .logo-loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.logo-text--analyzing .logo-slash {
+  animation: heartbeat 1.2s ease-in-out infinite;
+}
+
+.logo-text--success .logo-bracket {
+  color: #00C49A;
+}
+
+.logo-text--success .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--success .logo-status-icon--success path {
+  fill: #00C49A;
+}
+
+.logo-text--success {
+  animation: success-halo 3s ease forwards;
+}
+
+.logo-text--lowScore .logo-bracket {
+  color: #F59E0B;
+}
+
+.logo-text--lowScore .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--lowScore .logo-status-icon--warning path {
+  fill: #F59E0B;
+}
+
+.logo-text--lowScore {
+  animation: shake-quick 0.45s ease-in-out 1;
+}
+
+.logo-text--battle .logo-bracket {
+  color: #FF6B35;
+  animation: bracket-pulse 1.5s ease-in-out infinite;
+}
+
+.logo-text--battle .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--battle .logo-status-icon--bolt path {
+  fill: #FF6B35;
+}
+
+.logo-text--victory .logo-bracket {
+  color: #F59E0B;
+}
+
+.logo-text--victory .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--victory .logo-status-icon--trophy path {
+  fill: #F59E0B;
+}
+
+.logo-text--victory {
+  animation: victory-shine 0.6s ease forwards;
+}
+
+.logo-text--victory::before {
+  content: '';
+  position: absolute;
+  left: 10%;
+  top: -0.25rem;
+  width: 6px;
+  height: 6px;
+  background: #f59e0b;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.8);
+  animation: confetti-dot 0.8s ease-out forwards;
+}
+
+.logo-text--defeat .logo-bracket {
+  color: #8A857D;
+}
+
+.logo-text--defeat .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--defeat .logo-status-icon--strong path {
+  fill: #818CF8;
+}
+
+.logo-text--defeat {
+  animation: defeat-pulse 2.6s ease-in-out infinite;
+}
+
+.logo-text--graded .logo-bracket {
+  color: #7C6FF7;
+}
+
+.logo-text--graded .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--graded .logo-status-icon--check path {
+  fill: #7C6FF7;
+}
+
+.logo-text--graded {
+  animation: grade-stamp 0.35s ease forwards;
+}
+
+.logo-text--achievement .logo-bracket {
+  color: #f472b6;
+}
+
+.logo-text--achievement .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--achievement .logo-status-icon--badge path {
+  fill: #f472b6;
+}
+
+.logo-text--leaderboard .logo-bracket {
+  color: #FBBF24;
+}
+
+.logo-text--leaderboard .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--leaderboard .logo-status-icon--crown path {
+  fill: #FBBF24;
+}
+
+.logo-text--error .logo-bracket {
+  color: #F43F5E;
+}
+
+.logo-text--error .logo-status-icon-wrapper {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.logo-text--error .logo-slash {
+  transform: translateX(-3px);
+}
+
+.logo-text--error .logo-bracket--right {
+  transform: translateX(3px);
+}
+
+.logo-text--error {
+  animation: micro-shake 0.25s ease-in-out 1;
+}
+
+@keyframes slash-breathe {
+  0%, 100% { opacity: 1; transform: scaleX(1) translateX(0); }
+  50% { opacity: 0.76; transform: scaleX(1.02) translateX(0.06rem); }
+}
+
+@keyframes cursor-blink {
+  0%, 15% { opacity: 1; }
+  30%, 45% { opacity: 0; }
+  60%, 75% { opacity: 1; }
+  90%, 100% { opacity: 0; }
+}
+
+@keyframes sparkle-ping {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translateY(-4px) scale(1); opacity: 1; }
+  100% { transform: translateY(-8px) scale(1.2); opacity: 0; }
+}
+
+@keyframes loading-dot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-0.2rem); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.05); }
+  50% { transform: scale(0.98); }
+  75% { transform: scale(1.03); }
+}
+
+@keyframes success-halo {
+  0%, 80% { box-shadow: inset 0 0 0 1px rgba(0, 196, 154, 0.18), 0 0 0 0 rgba(0, 196, 154, 0.04); }
+  100% { box-shadow: inset 0 0 0 1px rgba(0, 196, 154, 0.22), 0 0 40px rgba(0, 196, 154, 0.18); }
+}
+
+@keyframes shake-quick {
+  0%, 100% { transform: translateX(0); }
+  15%, 45%, 75% { transform: translateX(-2px); }
+  30%, 60%, 90% { transform: translateX(2px); }
+}
+
+@keyframes bracket-pulse {
+  0%, 100% { text-shadow: 0 0 0 rgba(255, 107, 53, 0.25); }
+  50% { text-shadow: 0 0 14px rgba(255, 107, 53, 0.35); }
+}
+
+@keyframes victory-shine {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes confetti-dot {
+  0% { opacity: 1; transform: translateY(0) scale(0.7); }
+  100% { opacity: 0; transform: translateY(-10px) scale(1.2); }
+}
+
+@keyframes defeat-pulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+@keyframes grade-stamp {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+@keyframes micro-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-1px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1px); }
+  80% { transform: translateX(1px); }
+}

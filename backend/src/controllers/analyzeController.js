@@ -1,4 +1,4 @@
-import { analyzeCode } from '../services/geminiService.js';
+import { analyzeCode } from '../services/aiService.js';
 
 const analysisJobs = new Map();
 

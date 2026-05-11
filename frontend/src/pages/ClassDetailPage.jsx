@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   Plus, Users, BookOpen, Clock, ChevronRight, X, 
   Loader, UploadCloud, CheckCircle, AlertTriangle, FileText, 
-  MessageSquare, Star, ArrowLeft
+  MessageSquare, Star, ArrowLeft, Pencil, Trash2
 } from 'lucide-react';
 
 const ClassDetailPage = () => {
@@ -16,6 +16,8 @@ const ClassDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAssignment, setNewAssignment] = useState({ title: '', description: '', maxScore: 20, deadline: '' });
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [editAssignmentData, setEditAssignmentData] = useState({ title: '', description: '', maxScore: 20, deadline: '' });
   
   // For submission
   const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -51,6 +53,45 @@ const ClassDetailPage = () => {
       console.error("Failed to create", error);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const openEditAssignment = (assignment) => {
+    setEditingAssignment(assignment);
+    setEditAssignmentData({
+      title: assignment.title || '',
+      description: assignment.description || '',
+      maxScore: assignment.maxScore || 20,
+      deadline: assignment.deadline ? assignment.deadline.split('T')[0] : ''
+    });
+  };
+
+  const handleAssignmentFieldChange = (field, value) => {
+    setEditAssignmentData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditAssignment = async (e) => {
+    e.preventDefault();
+    if (!editingAssignment) return;
+    setUploading(true);
+    try {
+      await classService.updateAssignment(editingAssignment.id, editAssignmentData);
+      setEditingAssignment(null);
+      fetchClassDetails();
+    } catch (err) {
+      console.error('Failed to update assignment', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (assignmentId) => {
+    if (!window.confirm('Delete this assignment? This cannot be undone.')) return;
+    try {
+      await classService.deleteAssignment(assignmentId);
+      fetchClassDetails();
+    } catch (err) {
+      console.error('Failed to delete assignment', err);
     }
   };
 
@@ -157,9 +198,17 @@ const ClassDetailPage = () => {
                   
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                     {isTeacher ? (
-                      <Link to={`/assignments/${assignment.id}/submissions`} className="btn-primary" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-                        View Submissions
-                      </Link>
+                      <>
+                        <button type="button" onClick={() => openEditAssignment(assignment)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.95rem', fontSize: '0.85rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--bg-hover)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button type="button" onClick={() => handleDeleteAssignment(assignment.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.95rem', fontSize: '0.85rem', borderRadius: '0.75rem', border: '1px solid var(--danger)', background: 'rgba(236, 72, 86, 0.08)', color: 'var(--danger)', cursor: 'pointer' }}>
+                          <Trash2 size={14} /> Delete
+                        </button>
+                        <Link to={`/assignments/${assignment.id}/submissions`} className="btn-primary" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                          View Submissions
+                        </Link>
+                      </>
                     ) : assignment.submissions?.[0] ? (
                       <Link to={`/submissions/${assignment.submissions[0].id}`} className="btn-primary" style={{ background: 'var(--bg-hover)', color: 'var(--accent-mint)', border: '1px solid rgba(0,196,154,0.3)', padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <CheckCircle size={14} /> View Feedback
@@ -237,6 +286,51 @@ const ClassDetailPage = () => {
                 <button type="submit" className="btn-primary full-width" disabled={uploading}>
                   {uploading ? <Loader size={20} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Publish Assignment'}
                 </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingAssignment && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingAssignment(null)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }} />
+
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="glass-panel" style={{ position: 'relative', width: '100%', maxWidth: '520px', borderRadius: 'var(--radius-xl)', padding: '2.5rem', zIndex: 1 }}>
+
+              <button onClick={() => setEditingAssignment(null)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', color: 'var(--text-secondary)', cursor: 'pointer', background: 'none' }}>
+                <X size={20} />
+              </button>
+
+              <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}><Pencil size={24} color="var(--accent-mint)" /> Edit Assignment</h2>
+
+              <form onSubmit={handleEditAssignment}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Title</label>
+                  <input type="text" className="input-field" value={editAssignmentData.title} onChange={e => handleAssignmentFieldChange('title', e.target.value)} required />
+                </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Description / Requirements</label>
+                  <textarea className="input-field" rows={4} value={editAssignmentData.description} onChange={e => handleAssignmentFieldChange('description', e.target.value)} required />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Max Points</label>
+                    <input type="number" className="input-field" value={editAssignmentData.maxScore} onChange={e => handleAssignmentFieldChange('maxScore', e.target.value)} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Deadline (Optional)</label>
+                    <input type="date" className="input-field" value={editAssignmentData.deadline} onChange={e => handleAssignmentFieldChange('deadline', e.target.value)} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                  <button type="button" onClick={() => setEditingAssignment(null)} style={{ padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" className="btn-primary" disabled={uploading} style={{ padding: '0.85rem 1.25rem' }}>{uploading ? 'Saving…' : 'Save Changes'}</button>
+                </div>
               </form>
             </motion.div>
           </div>

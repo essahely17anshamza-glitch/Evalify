@@ -27,9 +27,11 @@ export const extractZip = async (zipFilePath, targetDirName) => {
 export const readExtractedFiles = async (dirPath) => {
   const allowedExtensions = ['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.c', '.cpp', '.cs', '.go', '.rs', '.php', '.rb', '.html', '.css', '.json', '.md'];
   const excludeFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
+
+  // Max total size of all code combined (400KB) to stay within ~100k tokens (Llama context limit is 128k)
+  const MAX_TOTAL_SIZE = 400 * 1024;
   let fileDataList = [];
   let totalSize = 0;
-  const MAX_TOTAL_SIZE = 1 * 1024 * 1024; // 1MB max text for prompt to prevent crashes
 
   const readDirRecursive = async (currentPath) => {
     const entries = await fs.readdir(currentPath, { withFileTypes: true });

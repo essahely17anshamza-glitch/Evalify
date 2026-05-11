@@ -3,7 +3,7 @@ import { X, UploadCloud, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectService } from '../services/api';
 
-const SubmitModal = ({ isOpen, onClose, onSuccess }) => {
+const SubmitModal = ({ isOpen, onClose, onSuccess, onStatusChange }) => {
   const [formData, setFormData] = useState({ title: '', description: '', language: 'javascript' });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +35,7 @@ const SubmitModal = ({ isOpen, onClose, onSuccess }) => {
     
     setLoading(true);
     setError('');
+    onStatusChange?.('analyzing');
     
     try {
       const data = new FormData();
@@ -45,8 +46,12 @@ const SubmitModal = ({ isOpen, onClose, onSuccess }) => {
 
       const res = await projectService.analyze(data);
       setResult(res.data);
+
+      const score = res?.data?.aiScore ?? res?.aiScore ?? 0;
+      onStatusChange?.(score >= 70 ? 'success' : 'lowScore');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to analyze project');
+      onStatusChange?.('error');
     } finally {
       setLoading(false);
     }
@@ -58,6 +63,7 @@ const SubmitModal = ({ isOpen, onClose, onSuccess }) => {
     setResult(null);
     setError('');
     if (result && onSuccess) onSuccess(result);
+    onStatusChange?.('idle');
     onClose();
   };
 
@@ -140,7 +146,7 @@ const SubmitModal = ({ isOpen, onClose, onSuccess }) => {
         .icon-btn { color: var(--text-secondary); } .icon-btn:hover { color: var(--text-primary); }
         .form-group { margin-bottom: 1rem; }
         .form-group label { display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-secondary); }
-        .input-field { width: 100%; padding: 0.75rem; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: white; font-family: inherit; }
+        .input-field { width: 100%; padding: 0.75rem; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; }
         .input-field:focus { outline: none; border-color: var(--accent-lavender); }
         .full-width { width: 100%; } .mt-4 { margin-top: 1rem; }
         .error-message { background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; }

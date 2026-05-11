@@ -92,7 +92,7 @@ const CreateChallengeModal = ({ isOpen, onClose, onCreated }) => {
 };
 
 // ── Challenge a Player Modal ────────────────────────────────────────────────
-const ChallengeModal = ({ challenge, onClose, onSuccess }) => {
+const ChallengeModal = ({ challenge, onClose, onSuccess, setLogoStatus }) => {
   const [opponentId, setOpponentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -101,12 +101,15 @@ const ChallengeModal = ({ challenge, onClose, onSuccess }) => {
     e.preventDefault();
     if (!opponentId.trim()) return setError('Enter an opponent user ID.');
     setLoading(true); setError('');
+    setLogoStatus?.('analyzing');
     try {
       await arenaService.initiateBattle({ challengeId: challenge.id, opponentId });
       onSuccess();
+      setLogoStatus?.('battle');
       onClose();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to initiate battle.');
+      setLogoStatus?.('error');
     } finally { setLoading(false); }
   };
 
@@ -136,7 +139,7 @@ const ChallengeModal = ({ challenge, onClose, onSuccess }) => {
 };
 
 // ── Main Arena Page ─────────────────────────────────────────────────────────
-const ArenaPage = () => {
+const ArenaPage = ({ setLogoStatus }) => {
   const { user } = useAuth();
   const [challenges, setChallenges] = useState([]);
   const [battles, setBattles] = useState([]);
@@ -299,7 +302,7 @@ const ArenaPage = () => {
       {/* Modals */}
       <AnimatePresence>
         {showCreateModal && <CreateChallengeModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onCreated={fetchData} />}
-        {selectedChallenge && <ChallengeModal challenge={selectedChallenge} onClose={() => setSelectedChallenge(null)} onSuccess={fetchData} />}
+        {selectedChallenge && <ChallengeModal challenge={selectedChallenge} onClose={() => setSelectedChallenge(null)} onSuccess={fetchData} setLogoStatus={setLogoStatus} />}
       </AnimatePresence>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
