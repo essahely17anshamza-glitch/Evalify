@@ -1,8 +1,14 @@
-import { Link } from 'react-router-dom';
-import { MessageSquare, Star, Code } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { MessageSquare, Star, Code, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../hooks/useAuth';
+import { adminService } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
-const ProjectCard = ({ project, index = 0 }) => {
+const ProjectCard = ({ project, index = 0, onDelete }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { t } = useLanguage();
   const score = project.aiScore;
   const scoreColor = score >= 85 ? 'var(--accent-mint)' : score >= 65 ? 'var(--warning)' : score > 0 ? 'var(--danger)' : 'var(--text-secondary)';
 
@@ -12,8 +18,8 @@ const ProjectCard = ({ project, index = 0 }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06, duration: 0.4 }}
     >
-      <Link to={`/projects/${project.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
+      <div onClick={() => navigate(`/projects/${project.id}`)} style={{ textDecoration: 'none', display: 'block' }}>
+        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer', borderLeft: project.user?.role === 'TEACHER' ? '3px solid #FFD700' : undefined }}>
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '0.75rem' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -28,18 +34,47 @@ const ProjectCard = ({ project, index = 0 }) => {
                   {project.user?.name?.[0]?.toUpperCase()}
                 </div>
                 {project.user?.name}
+                {project.user?.role === 'TEACHER' && (
+                  <span style={{
+                    background: 'rgba(255,215,0,0.15)', color: '#FFD700', borderRadius: '4px',
+                    padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 600, border: '1px solid rgba(255,215,0,0.3)',
+                    marginLeft: '0.3rem'
+                  }}>
+                    {t('teacherLabel')}
+                  </span>
+                )}
               </Link>
             </div>
-            {/* Score Circle */}
-            <div style={{
-              minWidth: '44px', height: '44px', borderRadius: '50%',
-              border: `2px solid ${scoreColor}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `${scoreColor}12`,
-              fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.8rem',
-              color: scoreColor, flexShrink: 0,
-            }}>
-              {score ?? '—'}
+            {/* Score Circle / Actions */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {user?.role === 'ADMIN' && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm(t('deleteProjectShortConfirm'))) {
+                      try {
+                        await adminService.deleteProject(project.id);
+                        if (onDelete) onDelete(project.id);
+                      } catch (err) {
+                        alert(t('unableDeleteProject'));
+                      }
+                    }
+                  }}
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: 'none', padding: '0.4rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+              <div style={{
+                minWidth: '44px', height: '44px', borderRadius: '50%',
+                border: `2px solid ${scoreColor}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `${scoreColor}12`,
+                fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.8rem',
+                color: scoreColor, flexShrink: 0,
+              }}>
+                {score ?? '—'}
+              </div>
             </div>
           </div>
 
@@ -64,11 +99,12 @@ const ProjectCard = ({ project, index = 0 }) => {
           {/* Footer */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.9rem', borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'var(--bg-hover)', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
-              <Code size={11} /> {project.language || 'Code'}
+              <Code size={11} /> {project.language || t('code')}
             </div>
             <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Star size={13} /> {project._count?.ratings ?? 0}
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }} title={`${project._count?.ratings ?? 0} ${t('ratings')}`}>
+                <Star size={13} fill={project.averageRating > 0 ? 'currentColor' : 'none'} style={{ color: project.averageRating > 0 ? 'var(--accent-warm)' : 'inherit' }} /> 
+                {project.averageRating > 0 ? project.averageRating : '—'}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <MessageSquare size={13} /> {project._count?.comments ?? 0}
@@ -76,7 +112,7 @@ const ProjectCard = ({ project, index = 0 }) => {
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 };

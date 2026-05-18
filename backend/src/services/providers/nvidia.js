@@ -19,7 +19,7 @@ export const callAI = async (prompt) => {
     console.log('[NVIDIA] Calling API...');
     
     const response = await client.chat.completions.create({
-      model: 'meta/llama-3.3-70b-instruct',
+      model: 'meta/llama-3.1-70b-instruct',
       messages: [
         {
           role: 'user',

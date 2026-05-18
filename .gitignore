@@ -71,3 +71,14 @@ uploads/
 # Temporary files
 tmp/
 temp/
+
+# Build output
+frontend/dist/
+
+# Lint reports
+eslint-results.json
+lint_output.txt
+
+# AI-tool / shell artifacts
+.codex-artifacts/
+nul

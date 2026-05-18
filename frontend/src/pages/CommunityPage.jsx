@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import ProjectCard from '../components/ProjectCard';
 import { projectService } from '../services/api';
 import { Search, Code, Loader } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const LANGUAGE_FILTERS = ['All', 'JavaScript', 'Python', 'TypeScript', 'Java', 'C++', 'Go', 'Rust', 'PHP', 'Ruby'];
 
@@ -13,15 +14,26 @@ const SORT_OPTIONS = [
 ];
 
 const CommunityPage = () => {
+  const { t } = useLanguage();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [langFilter, setLangFilter] = useState('All');
   const [sort, setSort] = useState('newest');
 
+  const SORT_OPTIONS = [
+    { label: t('newest'), value: 'newest' },
+    { label: t('topScored'), value: 'score' },
+    { label: t('mostDiscussed'), value: 'comments' },
+  ];
+
   useEffect(() => {
     projectService.getProjects()
-      .then(res => setProjects(res.data || []))
+      .then(res => {
+        // Handle new API response structure with pagination
+        const projectsData = res.data?.projects || res.data || [];
+        setProjects(Array.isArray(projectsData) ? projectsData : []);
+      })
       .catch(err => console.error('Failed to fetch projects', err))
       .finally(() => setLoading(false));
   }, []);
@@ -53,10 +65,10 @@ const CommunityPage = () => {
       {/* Page Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-          Community <span className="text-gradient">Projects</span>
+          {t('community')} <span className="text-gradient">{t('projects')}</span>
         </h1>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Explore AI-reviewed projects submitted by developers worldwide.
+          {t('exploreProjects')}
         </p>
       </div>
 
@@ -68,7 +80,7 @@ const CommunityPage = () => {
           <input
             id="community-search"
             type="text"
-            placeholder="Search projects or authors..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input-field"
@@ -107,7 +119,7 @@ const CommunityPage = () => {
               color: langFilter === lang ? 'var(--accent-lavender)' : 'var(--text-secondary)',
             }}
           >
-            {lang}
+            {lang === 'All' ? t('all') : lang}
           </button>
         ))}
       </div>
@@ -116,24 +128,24 @@ const CommunityPage = () => {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '5rem', color: 'var(--text-secondary)', gap: '0.75rem' }}>
           <Loader size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
-          Loading projects...
+          {t('loadingProjects')}
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : filtered.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           style={{ textAlign: 'center', padding: '5rem 0', color: 'var(--text-secondary)' }}>
           <Code size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>No projects found</h3>
-          <p>{search || langFilter !== 'All' ? 'Try adjusting your filters.' : 'Be the first to submit a project!'}</p>
+          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{t('noProjectsFound')}</h3>
+          <p>{search || langFilter !== 'All' ? t('adjustFilters') : t('firstToSubmit')}</p>
         </motion.div>
       ) : (
         <>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-            {filtered.length} project{filtered.length !== 1 ? 's' : ''} found
+            {filtered.length} {t('projectsFound')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
             {filtered.map((project, i) => (
-              <ProjectCard key={project.id} project={project} index={i} />
+              <ProjectCard key={project.id} project={project} index={i} onDelete={(id) => setProjects(projects.filter(p => p.id !== id))} />
             ))}
           </div>
         </>

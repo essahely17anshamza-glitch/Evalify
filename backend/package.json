@@ -13,18 +13,26 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/lib-storage": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@google/genai": "^1.52.0",
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
     "express-validator": "^7.3.2",
     "extract-zip": "^2.0.1",
     "groq-sdk": "^1.1.2",
+    "helmet": "^8.1.0",
+    "jsdom": "^29.1.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "openai": "^6.37.0"
+    "multer-s3": "^3.0.1",
+    "openai": "^6.37.0",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",
@@ -34,5 +42,8 @@
     "ignore": [
       "uploads/*"
     ]
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }

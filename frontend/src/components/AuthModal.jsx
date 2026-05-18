@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../context/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AuthModal = ({ isOpen, onClose }) => {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'STUDENT' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, register } = useAuth();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -22,14 +26,18 @@ const AuthModal = ({ isOpen, onClose }) => {
     setIsLoading(true);
     
     try {
+      let data;
       if (isLogin) {
-        await login({ email: formData.email, password: formData.password });
+        data = await login({ email: formData.email, password: formData.password });
       } else {
-        await register(formData);
+        data = await register(formData);
       }
       onClose();
+      if (data?.user?.role === 'ADMIN') {
+        navigate('/admin');
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Authentication failed');
+      setError(err.response?.data?.error || t('authFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +54,7 @@ const AuthModal = ({ isOpen, onClose }) => {
           className="modal-content card"
         >
           <div className="modal-header">
-            <h2>{isLogin ? 'Welcome Back' : 'Join Evalify'}</h2>
+            <h2>{isLogin ? t('welcomeBack') : t('createAccount')}</h2>
             <button onClick={onClose} className="icon-btn"><X size={20} /></button>
           </div>
           
@@ -55,7 +63,7 @@ const AuthModal = ({ isOpen, onClose }) => {
           <form onSubmit={handleSubmit} className="auth-form">
             {!isLogin && (
               <div className="form-group">
-                <label>Name</label>
+                <label>{t('fullName')}</label>
                 <input 
                   type="text" name="name" 
                   value={formData.name} onChange={handleChange} 
@@ -64,7 +72,7 @@ const AuthModal = ({ isOpen, onClose }) => {
               </div>
             )}
             <div className="form-group">
-              <label>Email</label>
+              <label>{t('email')}</label>
               <input 
                 type="email" name="email" 
                 value={formData.email} onChange={handleChange} 
@@ -72,38 +80,29 @@ const AuthModal = ({ isOpen, onClose }) => {
               />
             </div>
             <div className="form-group">
-              <label>Password</label>
+              <label>{t('password')}</label>
               <input 
                 type="password" name="password" 
                 value={formData.password} onChange={handleChange} 
                 required className="input-field"
               />
             </div>
-            {!isLogin && (
-              <div className="form-group">
-                <label>I am a...</label>
-                <select name="role" value={formData.role} onChange={handleChange} className="input-field">
-                  <option value="USER">Developer</option>
-                  <option value="STUDENT">Student</option>
-                  <option value="TEACHER">Teacher</option>
-                </select>
-              </div>
-            )}
+
             
             <button type="submit" className="btn-primary full-width mt-4" disabled={isLoading}>
-              {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+              {isLoading ? t('loading') : (isLogin ? t('signIn') : t('createAccount'))}
             </button>
           </form>
           
           <div className="modal-footer mt-4 text-center">
             <span className="text-sm text-secondary">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {isLogin ? t('dontHaveAccount') : t('alreadyHaveAccount')}
               <button 
                 type="button" 
                 className="text-link" 
                 onClick={() => setIsLogin(!isLogin)}
               >
-                {isLogin ? 'Sign Up' : 'Sign In'}
+                {isLogin ? t('createAccount') : t('signIn')}
               </button>
             </span>
           </div>
@@ -120,7 +119,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         .modal-backdrop {
           position: absolute;
           top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(10, 10, 10, 0.8);
+          background: var(--overlay-bg);
           backdrop-filter: blur(4px);
         }
         .modal-content {

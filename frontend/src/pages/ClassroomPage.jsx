@@ -4,9 +4,11 @@ import { classService } from '../services/api';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, BookOpen, Plus, Search, Shield, ArrowRight, X, Loader, Book } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const ClassroomPage = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState('');
@@ -41,7 +43,7 @@ const ClassroomPage = () => {
       setShowModal(false);
       fetchClasses();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to join class');
+      setError(err.response?.data?.error || t('failedJoinClass'));
     } finally {
       setSubmitting(false);
     }
@@ -57,7 +59,7 @@ const ClassroomPage = () => {
       setShowModal(false);
       fetchClasses();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create class');
+      setError(err.response?.data?.error || t('failedCreateClass'));
     } finally {
       setSubmitting(false);
     }
@@ -72,8 +74,8 @@ const ClassroomPage = () => {
   if (!user) return (
     <div style={{ textAlign: 'center', padding: '5rem 0' }}>
       <Shield size={48} color="var(--accent-lavender)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
-      <h2>Authentication Required</h2>
-      <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Please sign in to view your classrooms.</p>
+      <h2>{t('authRequired')}</h2>
+      <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{t('authRequiredText')}</p>
     </div>
   );
 
@@ -85,22 +87,20 @@ const ClassroomPage = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3rem', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <BookOpen size={32} color="var(--accent-lavender)" /> My <span className="text-gradient">Classroom</span>
+            <BookOpen size={32} color="var(--accent-lavender)" /> <span className="text-gradient">{t('myClassroom')}</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '500px' }}>
-            {isTeacher 
-              ? 'Manage your students, publish assignments, and use Gemini AI to assist in grading.' 
-              : 'Access your courses, submit assignments for AI review, and track your progress.'}
+            {isTeacher ? t('manageClassroom') : t('accessCourses')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           {isTeacher ? (
             <button className="btn-primary" onClick={() => openModal('create')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Plus size={18} /> Create New Class
+              <Plus size={18} /> {t('createNewClass')}
             </button>
           ) : (
             <button className="btn-primary" onClick={() => openModal('join')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={18} /> Join a Class
+              <Users size={18} /> {t('joinClass')}
             </button>
           )}
         </div>
@@ -110,19 +110,17 @@ const ClassroomPage = () => {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem', gap: '0.75rem', color: 'var(--text-secondary)' }}>
           <Loader size={24} style={{ animation: 'spin 0.8s linear infinite' }} />
-          Loading your classes...
+          {t('loadingClasses')}
         </div>
       ) : classes.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '5rem 2rem', background: 'rgba(21, 21, 21, 0.3)', borderStyle: 'dashed' }}>
-          <Book size={48} color="var(--border-color)" style={{ marginBottom: '1.5rem' }} />
-          <h3 style={{ marginBottom: '0.5rem' }}>No Classes Yet</h3>
+        <div className="card" style={{ textAlign: 'center', padding: '5rem 2rem', borderStyle: 'dashed', boxShadow: 'none' }}>
+          <Book size={48} color="var(--text-muted)" style={{ marginBottom: '1.5rem' }} />
+          <h3 style={{ marginBottom: '0.5rem' }}>{t('noClassesYet')}</h3>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-            {isTeacher 
-              ? "You haven't created any classes. Start by creating one to invite students." 
-              : "You haven't joined any classes yet. Get an invite code from your teacher."}
+            {isTeacher ? t('noClassesTeacher') : t('noClassesStudent')}
           </p>
           <button className="btn-primary" onClick={() => openModal(isTeacher ? 'create' : 'join')}>
-            {isTeacher ? 'Create Your First Class' : 'Join a Class'}
+            {isTeacher ? t('createFirstClass') : t('joinAClass')}
           </button>
         </div>
       ) : (
@@ -134,7 +132,7 @@ const ClassroomPage = () => {
                   <div>
                     <h3 style={{ marginBottom: '0.75rem', color: 'var(--text-primary)' }}>{cls.name}</h3>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.5rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {cls.description || 'Learning and building together on Evalify.'}
+                      {cls.description || t('learningTogether')}
                     </p>
                   </div>
                   
@@ -153,7 +151,7 @@ const ClassroomPage = () => {
                       </div>
                     ) : (
                       <div style={{ fontSize: '0.8rem', color: 'var(--accent-lavender)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        View Class <ArrowRight size={14} />
+                        {t('viewClass')} <ArrowRight size={14} />
                       </div>
                     )}
                   </div>
@@ -169,7 +167,7 @@ const ClassroomPage = () => {
         {showModal && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)}
-              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }} />
+              style={{ position: 'absolute', inset: 0, background: 'var(--overlay-bg)', backdropFilter: 'blur(4px)' }} />
             
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="glass-panel" style={{ position: 'relative', width: '100%', maxWidth: '450px', borderRadius: 'var(--radius-xl)', padding: '2.5rem', zIndex: 1 }}>
@@ -179,33 +177,33 @@ const ClassroomPage = () => {
               </button>
 
               <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {modalType === 'create' ? <><Plus size={24} color="var(--accent-mint)" /> Create Class</> : <><Users size={24} color="var(--accent-lavender)" /> Join Class</>}
+                {modalType === 'create' ? <><Plus size={24} color="var(--accent-mint)" /> {t('createClass')}</> : <><Users size={24} color="var(--accent-lavender)" /> {t('joinClass')}</>}
               </h2>
 
               <form onSubmit={modalType === 'create' ? handleCreate : handleJoin}>
                 {modalType === 'create' ? (
                   <>
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Class Name</label>
-                      <input type="text" className="input-field" placeholder="e.g. Advanced React Architecture" value={newClass.name} onChange={e => setNewClass({...newClass, name: e.target.value})} required />
+                      <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>{t('className')}</label>
+                      <input type="text" className="input-field" placeholder={t('classPlaceholder')} value={newClass.name} onChange={e => setNewClass({...newClass, name: e.target.value})} required />
                     </div>
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Description</label>
-                      <textarea className="input-field" placeholder="What will students learn in this class?" rows={3} value={newClass.description} onChange={e => setNewClass({...newClass, description: e.target.value})} />
+                      <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>{t('description')}</label>
+                      <textarea className="input-field" placeholder={t('classDescript')} rows={3} value={newClass.description} onChange={e => setNewClass({...newClass, description: e.target.value})} />
                     </div>
                   </>
                 ) : (
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Invite Code</label>
-                    <input type="text" className="input-field" placeholder="6-digit code (e.g. ABC123)" value={inviteCode} onChange={e => setInviteCode(e.target.value.toUpperCase())} maxLength={6} required style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }} />
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.75rem', textAlign: 'center' }}>Ask your teacher for the 6-digit class code.</p>
+                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>{t('inviteCodeLabel')}</label>
+                    <input type="text" className="input-field" placeholder={t('inviteCodePlaceholder')} value={inviteCode} onChange={e => setInviteCode(e.target.value.toUpperCase())} maxLength={6} required style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }} />
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.75rem', textAlign: 'center' }}>{t('inviteCodeHint')}</p>
                   </div>
                 )}
 
                 {error && <div style={{ color: 'var(--danger)', fontSize: '0.875rem', marginBottom: '1.25rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>{error}</div>}
 
                 <button type="submit" className="btn-primary full-width" disabled={submitting} style={{ height: '3rem', fontSize: '1rem' }}>
-                  {submitting ? <Loader size={20} style={{ animation: 'spin 0.8s linear infinite' }} /> : (modalType === 'create' ? 'Create Class' : 'Join Class')}
+                  {submitting ? <Loader size={20} style={{ animation: 'spin 0.8s linear infinite' }} /> : (modalType === 'create' ? t('createClass') : t('joinClass2'))}
                 </button>
               </form>
             </motion.div>

@@ -21,6 +21,10 @@ export const register = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Name, email, and password are required' });
     }
 
+    if (!email.endsWith('@ofppt-edu.ma')) {
+      return res.status(400).json({ success: false, error: 'Only @ofppt-edu.ma emails are allowed to register.' });
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'Email already registered' });
@@ -29,16 +33,12 @@ export const register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Validate role
-    const validRoles = ['USER', 'STUDENT', 'TEACHER', 'ADMIN'];
-    const userRole = validRoles.includes(role) ? role : 'USER';
-
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: userRole,
+        role: 'STUDENT',
       },
     });
 

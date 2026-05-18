@@ -31,8 +31,12 @@ model User {
   enrollments   ClassEnrollment[]
   submissions   Submission[]
   battleSubmissions BattleSubmission[]
-  arenaRanking  ArenaRanking?
+  arenaRankings ArenaRanking[]
   badges        UserBadge[]
+  roleRequests  RoleRequest[]
+  helpfulVotes  HelpfulVote[]
+  commentReports CommentReport[]
+  notifications Notification[]
   
   // Arena
   battlesAsPlayerA Battle[]  @relation("PlayerA")
@@ -63,6 +67,9 @@ model Project {
   aiScore         Int?
   aiAnalysisJson  Json?
   viewsCount      Int       @default(0)
+  projectType     String    @default("unknown") // "web", "cli", "gui", "unknown"
+  screenshotPath  String?
+  repoStars       Int?
   createdAt       DateTime  @default(now())
   
   user            User      @relation(fields: [userId], references: [id])
@@ -82,10 +89,39 @@ model Comment {
   isReported  Boolean   @default(false)
   createdAt   DateTime  @default(now())
   
-  user        User      @relation(fields: [userId], references: [id])
-  project     Project   @relation(fields: [projectId], references: [id])
-  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies     Comment[] @relation("CommentReplies")
+  user          User            @relation(fields: [userId], references: [id])
+  project       Project         @relation(fields: [projectId], references: [id])
+  parent        Comment?        @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       Comment[]       @relation("CommentReplies")
+  helpfulVotes  HelpfulVote[]
+  reports       CommentReport[]
+}
+
+// HelpfulVote — Tracks who marked a comment as helpful
+model HelpfulVote {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  commentId BigInt
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  comment   Comment  @relation(fields: [commentId], references: [id])
+
+  @@unique([userId, commentId])
+}
+
+// CommentReport — User reports on inappropriate comments
+model CommentReport {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  commentId BigInt
+  reason    String   @db.Text
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  comment   Comment  @relation(fields: [commentId], references: [id])
+
+  @@unique([userId, commentId])
 }
 
 // Rating — 1-5 star ratings
@@ -115,6 +151,7 @@ model Class {
   teacher     User      @relation("TeacherClasses", fields: [teacherId], references: [id])
   enrollments ClassEnrollment[]
   assignments Assignment[]
+  challenges  Challenge[]
 }
 
 // ClassEnrollment — Many-to-many pivot
@@ -132,17 +169,21 @@ model ClassEnrollment {
 
 // Assignment — Teacher-published task
 model Assignment {
-  id          BigInt    @id @default(autoincrement())
-  classId     BigInt
-  title       String
-  description String    @db.Text
-  deadline    DateTime?
-  maxScore    Int       @default(20)
-  isPublished Boolean   @default(false)
-  createdAt   DateTime  @default(now())
+  id                     BigInt    @id @default(autoincrement())
+  classId                BigInt
+  title                  String
+  description            String    @db.Text
+  deadline               DateTime?
+  maxScore               Int       @default(20)
+  isPublished            Boolean   @default(false)
+  attachmentPath         String?   @db.VarChar(512)
+  attachmentOriginalName String?   @db.VarChar(255)
+  attachmentMimeType     String?   @db.VarChar(120)
+  attachmentSize         Int?
+  createdAt              DateTime  @default(now())
   
-  class       Class     @relation(fields: [classId], references: [id])
-  submissions Submission[]
+  class                  Class     @relation(fields: [classId], references: [id])
+  submissions            Submission[]
 }
 
 // Submission — Student work with dual evaluation
@@ -155,6 +196,7 @@ model Submission {
   notes            String?   @db.Text
   submittedAt      DateTime  @default(now())
   isLate           Boolean   @default(false)
+  type             String    @default("zip") // "html_css", "python", "sql", "zip"
   aiFeedback       String?   @db.Text
   aiScore          Int?
   aiAnalysisJson   Json?
@@ -198,15 +240,23 @@ model UserBadge {
 model Challenge {
   id          BigInt    @id @default(autoincrement())
   creatorId   BigInt?
+  classId     BigInt?
   title       String
   prompt      String    @db.Text
   language    String    @default("any") // "any" or specific language
   duration    Duration  @default(STANDARD) // QUICK(2h), STANDARD(48h), ROYALE(1w)
   difficulty  Difficulty @default(INTERMEDIATE)
+  type        ChallengeType @default(COMMUNITY)
   createdAt   DateTime  @default(now())
   
   creator     User?     @relation(fields: [creatorId], references: [id])
+  class       Class?    @relation(fields: [classId], references: [id])
   battles     Battle[]
+}
+
+enum ChallengeType {
+  OFFICIAL
+  COMMUNITY
 }
 
 enum Duration {
@@ -267,7 +317,8 @@ model BattleSubmission {
 // ArenaRanking — Player's competitive ranking
 model ArenaRanking {
   id          BigInt   @id @default(autoincrement())
-  userId      BigInt   @unique
+  userId      BigInt
+  type        ChallengeType @default(COMMUNITY)
   tier        ArenaTier @default(BRONZE)
   wins        Int      @default(0)
   losses      Int      @default(0)
@@ -276,6 +327,8 @@ model ArenaRanking {
   season      String   // e.g., "2026-Q1"
   
   user        User     @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, type])
 }
 
 enum ArenaTier {
@@ -284,4 +337,36 @@ enum ArenaTier {
   GOLD
   DIAMOND
   MASTER
+}
+
+// RoleRequest — A user's request to be upgraded to a TEACHER role
+model RoleRequest {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  status    RequestStatus @default(PENDING)
+  proof     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Notification — Persisted user notifications
+model Notification {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  type      String
+  title     String
+  message   String   @db.Text
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Link, NavLink, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './index.css';
 import AuthModal from './components/AuthModal';
 import SubmitModal from './components/SubmitModal';
@@ -13,9 +13,34 @@ import ArenaPage from './pages/ArenaPage';
 import BattleDetailPage from './pages/BattleDetailPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProfilePage from './pages/ProfilePage';
+import LeaderboardPage from './pages/LeaderboardPage';
+import AdminPage from './pages/AdminPage';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
-import { Zap, LogOut, User, Sun, Moon } from 'lucide-react';
+import { useLanguage } from './context/LanguageContext';
+import useSocket from './hooks/useSocket';
+import { Zap, LogOut, User, Sun, Moon, Shield, Bell, Loader, Languages } from 'lucide-react';
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const { t } = useLanguage();
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Loader size={24} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent-lavender)' }} /></div>;
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', textAlign: 'center' }}>
+        <Shield size={64} style={{ opacity: 0.2, marginBottom: '1.5rem' }} />
+        <h2 style={{ marginBottom: '1rem' }}>{t('authRequired')}</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '400px' }}>
+          {t('authRequiredText')}
+        </p>
+        <button id="auth-required-signin" className="btn-primary" onClick={() => document.getElementById('nav-signin-btn')?.click()} style={{ padding: '0.8rem 2rem', fontSize: '1rem' }}>
+          {t('signIn')}
+        </button>
+      </div>
+    );
+  }
+  return children;
+};
 
 const LOGO_STATUS_ICONS = {
   analyzing: (
@@ -96,6 +121,7 @@ const NAV_LINKS = [
   { to: '/community', label: 'Community' },
   { to: '/arena', label: 'Arena' },
   { to: '/classroom', label: 'Classroom' },
+  { to: '/leaderboard', label: 'Leaderboard' },
 ];
 
 function App() {
@@ -105,8 +131,14 @@ function App() {
   const [logoStatus, setLogoStatus] = useState('idle');
   const { user, logout, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { lang, t, toggleLanguage } = useLanguage();
+  const { notifications, unreadCount, markNotificationRead, clearNotifications } = useSocket();
   const navigate = useNavigate();
+  const location = useLocation();
   const statusResetTimer = useRef(null);
+
+  // Admin routes bypass the normal layout entirely
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   const handleLogoStatusChange = (nextStatus) => {
     if (statusResetTimer.current) {
@@ -129,8 +161,17 @@ function App() {
 
   const handleLogout = () => { logout(); setShowUserMenu(false); };
 
+  const [showNotifications, setShowNotifications] = useState(false);
+
   return (
     <div className="app-container">
+      {/* ── Admin routes: fullscreen, no navbar ── */}
+      {isAdminRoute ? (
+        <Routes>
+          <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        </Routes>
+      ) : (
+      <>
       {/* ── Navbar ── */}
       <nav style={{
         padding: '0 2rem',
@@ -151,7 +192,10 @@ function App() {
 
         {/* Nav links */}
         <div style={{ display: 'flex', gap: '0.25rem' }}>
-          {NAV_LINKS.map(link => (
+          {user && NAV_LINKS.filter(link => {
+            if (user.role === 'ADMIN' && ['Arena', 'Classroom'].includes(link.label)) return false;
+            return true;
+          }).map(link => (
             <NavLink key={link.to} to={link.to} id={`nav-${link.label.toLowerCase()}`}
               style={({ isActive }) => ({
                 padding: '0.5rem 0.9rem',
@@ -163,18 +207,35 @@ function App() {
                 transition: 'all 150ms',
                 textDecoration: 'none',
               })}>
-              {link.label}
+              {t(link.label.toLowerCase())}
             </NavLink>
           ))}
         </div>
 
         {/* Auth area */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Language toggle */}
+          <button
+            className="icon-btn"
+            onClick={toggleLanguage}
+            title={lang === 'en' ? t('switchFr') : t('switchEn')}
+            style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--text-secondary)', background: 'var(--bg-hover)',
+              border: '1px solid var(--border-color)', cursor: 'pointer',
+              position: 'relative'
+            }}
+          >
+            <Languages size={18} />
+            <span style={{ fontSize: '0.6rem', fontWeight: 800, position: 'absolute', top: -4, right: -4, background: 'var(--accent-lavender)', color: 'white', padding: '1px 3px', borderRadius: '4px', textTransform: 'uppercase' }}>{lang}</span>
+          </button>
+
           {/* Theme toggle */}
           <button
             id="nav-theme-toggle"
             onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? t('switchLight') : t('switchDark')}
             style={{
               width: '36px',
               height: '36px',
@@ -199,10 +260,90 @@ function App() {
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-hover)', animation: 'pulse 1.5s infinite' }} />
           ) : user ? (
             <>
-              <button id="nav-submit-btn" className="btn-primary" onClick={() => setIsSubmitModalOpen(true)}
-                style={{ padding: '0.5rem 1.1rem', fontSize: '0.875rem' }}>
-                + Submit
-              </button>
+              {/* Admin shield icon — only for admins, in main navbar */}
+              {user?.role === 'ADMIN' && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  title={t('adminDashboard')}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,196,154,0.1)', border: '1px solid rgba(0,196,154,0.3)',
+                    color: 'var(--accent-mint)', cursor: 'pointer', flexShrink: 0,
+                    transition: 'all 150ms',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,196,154,0.2)'; e.currentTarget.style.transform = 'scale(1.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,196,154,0.1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                  <Shield size={16} />
+                </button>
+              )}
+              {/* Notifications */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowNotifications(v => !v)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer',
+                    background: 'var(--bg-hover)', border: '1px solid var(--border-color)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)',
+                    transition: 'color 200ms ease, background 200ms ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-lavender)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                >
+                  <Bell size={16} />
+                  {unreadCount > 0 && (
+                    <span style={{ position: 'absolute', top: 0, right: 0, background: 'var(--danger)', color: '#fff', fontSize: '0.65rem', fontWeight: 800, width: '16px', height: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                {showNotifications && (
+                  <div style={{
+                    position: 'absolute', right: 0, top: 'calc(100% + 8px)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-lg)', width: '320px', maxHeight: '400px', overflowY: 'auto',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.5)', zIndex: 200, padding: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{t('notifications')}</h4>
+                      {notifications.length > 0 && (
+                        <button onClick={clearNotifications} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer' }}>{t('clearAll')}</button>
+                      )}
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem 0' }}>{t('noNotifications')}</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {notifications.map(n => (
+                          <div key={n.id} onClick={() => {
+                            markNotificationRead(n.id);
+                            if (n.link) {
+                              navigate(n.link);
+                            } else if (n.type === 'battleInvite' || n.type === 'battle') {
+                              navigate(`/arena/battles/${n.data?.battleId || n.data?.id}`);
+                            } else if (n.type === 'comment' && n.data?.projectId) {
+                              navigate(`/projects/${n.data.projectId}`);
+                            }
+                            setShowNotifications(false);
+                          }} style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', background: n.read ? 'transparent' : 'rgba(124,111,247,0.05)', border: `1px solid ${n.read ? 'transparent' : 'rgba(124,111,247,0.2)'}`, cursor: 'pointer' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.2rem', color: n.read ? 'var(--text-primary)' : 'var(--accent-lavender)' }}>{n.title}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{n.message}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>{new Date(n.timestamp).toLocaleTimeString(lang === 'en' ? 'en-US' : 'fr-FR')}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {user.role !== 'ADMIN' && (
+                <button id="nav-submit-btn" className="btn-primary" onClick={() => setIsSubmitModalOpen(true)}
+                  style={{ padding: '0.5rem 1.1rem', fontSize: '0.875rem' }}>
+                  {t('addProject')}
+                </button>
+              )}
               {/* Avatar menu */}
               <div style={{ position: 'relative' }}>
                 <button id="nav-avatar-btn" onClick={() => setShowUserMenu(v => !v)}
@@ -211,11 +352,17 @@ function App() {
                     background: 'linear-gradient(135deg, var(--accent-lavender), var(--accent-warm))',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 700, fontSize: '0.85rem', color: '#fff',
-                    border: '2px solid transparent',
+                    border: user.role === 'TEACHER' ? '2px solid #FFD700' : '2px solid transparent',
                     boxShadow: showUserMenu ? '0 0 0 2px var(--accent-lavender)' : 'none',
                     transition: 'box-shadow 150ms',
+                    position: 'relative'
                   }}>
                   {user.name?.[0]?.toUpperCase()}
+                  {user.role === 'ADMIN' && (
+                    <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--danger)', color: 'white', borderRadius: '50%', padding: '2px', display: 'flex' }}>
+                      <Shield size={10} />
+                    </div>
+                  )}
                 </button>
                 {showUserMenu && (
                   <div style={{
@@ -226,19 +373,19 @@ function App() {
                   }}>
                     <div style={{ padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.25rem' }}>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.name}</div>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{user.role}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{t(user.role?.toLowerCase())}</div>
                     </div>
                     <button id="nav-profile-link" onClick={() => { navigate(`/profile/${user.id}`); setShowUserMenu(false); }}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--text-secondary)', fontSize: '0.875rem', cursor: 'pointer', background: 'none' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                      <User size={14} /> My Profile
+                      <User size={14} /> {t('myProfile')}
                     </button>
                     <button id="nav-logout-btn" onClick={handleLogout}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--danger)', fontSize: '0.875rem', cursor: 'pointer', background: 'none' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                      <LogOut size={14} /> Sign Out
+                      <LogOut size={14} /> {t('signOut')}
                     </button>
                   </div>
                 )}
@@ -247,35 +394,36 @@ function App() {
           ) : (
             <button id="nav-signin-btn" className="btn-primary" onClick={() => setIsAuthModalOpen(true)}
               style={{ padding: '0.5rem 1.1rem', fontSize: '0.875rem' }}>
-              Sign In
+              {t('signIn')}
             </button>
           )}
         </div>
       </nav>
 
-      {/* Click-away for user menu */}
-      {showUserMenu && <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowUserMenu(false)} />}
+      {/* Click-away for user menu and notifications */}
+      {(showUserMenu || showNotifications) && <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => { setShowUserMenu(false); setShowNotifications(false); }} />}
 
       {/* ── Main ── */}
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<HomePage onOpenAuth={() => setIsAuthModalOpen(true)} onOpenSubmit={() => setIsSubmitModalOpen(true)} user={user} />} />
-          <Route path="/community" element={<CommunityPage />} />
-          <Route path="/projects/:id" element={<ProjectDetailPage />} />
-          <Route path="/arena" element={<ArenaPage setLogoStatus={handleLogoStatusChange} />} />
-          <Route path="/arena/battles/:id" element={<BattleDetailPage setLogoStatus={handleLogoStatusChange} />} />
-          <Route path="/submissions/:id" element={<SubmissionDetailPage setLogoStatus={handleLogoStatusChange} />} />
-          <Route path="/classroom" element={<ClassroomPage />} />
-          <Route path="/classroom/:id" element={<ClassDetailPage />} />
-          <Route path="/assignments/:id/submissions" element={<SubmissionsPage />} />
-          <Route path="/submissions/:id" element={<SubmissionDetailPage />} />
-          <Route path="/profile/:id" element={<ProfilePage />} />
+          <Route path="/" element={user ? <HomePage user={user} onOpenSubmit={() => setIsSubmitModalOpen(true)} /> : <ProtectedRoute />} />
+          <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+          <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
+          <Route path="/arena" element={<ProtectedRoute><ArenaPage setLogoStatus={handleLogoStatusChange} /></ProtectedRoute>} />
+          <Route path="/arena/battles/:id" element={<ProtectedRoute><BattleDetailPage setLogoStatus={handleLogoStatusChange} /></ProtectedRoute>} />
+          <Route path="/submissions/:id" element={<ProtectedRoute><SubmissionDetailPage setLogoStatus={handleLogoStatusChange} /></ProtectedRoute>} />
+          <Route path="/classroom" element={<ProtectedRoute><ClassroomPage /></ProtectedRoute>} />
+          <Route path="/classroom/:id" element={<ProtectedRoute><ClassDetailPage /></ProtectedRoute>} />
+          <Route path="/assignments/:id/submissions" element={<ProtectedRoute><SubmissionsPage /></ProtectedRoute>} />
+          <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
         </Routes>
       </main>
 
-      {/* ── Modals ── */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-      <SubmitModal isOpen={isSubmitModalOpen} onClose={() => setIsSubmitModalOpen(false)} onSuccess={() => {}} onStatusChange={handleLogoStatusChange} />
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+        <SubmitModal isOpen={isSubmitModalOpen} onClose={() => setIsSubmitModalOpen(false)} onSuccess={() => {}} onStatusChange={handleLogoStatusChange} />
+      </>
+      )}
 
       <style>{`
         @keyframes pulse {

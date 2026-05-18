@@ -34,10 +34,18 @@ export const isAuthenticated = async (req, res, next) => {
 };
 
 export const isTeacher = (req, res, next) => {
-  if (req.user && (req.user.role === 'TEACHER' || req.user.role === 'ADMIN')) {
+  if (req.user && req.user.role === 'TEACHER') {
     next();
   } else {
-    return res.status(403).json({ success: false, error: 'Access denied. Teacher privileges required.' });
+    return res.status(403).json({ success: false, error: 'Access denied. Formateur privileges required.' });
+  }
+};
+
+export const isNotAdmin = (req, res, next) => {
+  if (req.user && req.user.role !== 'ADMIN') {
+    next();
+  } else {
+    return res.status(403).json({ success: false, error: 'Access denied. Administrators cannot perform this action.' });
   }
 };
 
