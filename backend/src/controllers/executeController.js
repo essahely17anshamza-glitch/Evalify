@@ -1,9 +1,35 @@
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
+
+// Detect available Python command on the system by actually running it
+const getPythonCommand = () => {
+  // On Windows, prefer `py` (the Python launcher) since `python` may be
+  // hijacked by the Microsoft Store stub
+  const isWin = process.platform === 'win32';
+  const candidates = isWin ? ['py', 'python3', 'python'] : ['python3', 'python', 'py'];
+
+  for (const cmd of candidates) {
+    try {
+      const result = execSync(`"${cmd}" --version 2>&1`, {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 5000,
+        windowsHide: true
+      });
+      // Verify output looks like a real Python version (e.g. "Python 3.12.0")
+      if (result.trim().toLowerCase().includes('python')) {
+        return cmd;
+      }
+    } catch (e) {
+      // Command failed or isn't real Python, try next
+    }
+  }
+  return 'python'; // fallback (will likely fail with a clear error)
+};
 
 export const executeCode = async (req, res) => {
   try {
@@ -29,37 +55,28 @@ export const executeCode = async (req, res) => {
     for (const f of files) {
       let content = f.content;
       
-      // Inject JSDOM polyfill for JS so document/window are available!
+      // Inject minimal DOM shim for JS so browser APIs don't crash Node.js
       if (lang === 'javascript' || lang === 'js') {
-        const jsdomUrl = import.meta.resolve('jsdom');
-        const domInjection = `import { JSDOM } from '${jsdomUrl}';
-const dom = new JSDOM(\`<!DOCTYPE html><html><body></body></html>\`);
-global.window = dom.window;
-global.document = dom.window.document;
-Object.defineProperty(global, 'navigator', { value: dom.window.navigator, writable: true, configurable: true });
-global.HTMLElement = dom.window.HTMLElement;
+        const domShim = `// Minimal DOM shim for server-side execution
+global.document = {
+  querySelector: () => null,
+  querySelectorAll: () => [],
+  getElementById: () => null,
+  getElementsByClassName: () => [],
+  getElementsByTagName: () => [],
+  createElement: () => ({}),
+  createTextNode: () => ({}),
+  body: {},
+  head: {},
+  addEventListener: () => {},
+  removeEventListener: () => {},
+};
+global.window = { document: global.document, location: { href: '' } };
+Object.defineProperty(global, 'navigator', { value: { userAgent: 'Node.js' }, writable: true, configurable: true });
+// End DOM shim
 
-// Smart Mocking: Auto-create elements if they are requested so the code doesn't crash on null!
-const origGetId = document.getElementById.bind(document);
-document.getElementById = (id) => {
-  let el = origGetId(id);
-  if (!el) { el = document.createElement('div'); el.id = id; document.body.appendChild(el); }
-  return el;
-};
-const origQuery = document.querySelector.bind(document);
-document.querySelector = (selector) => {
-  let el = origQuery(selector);
-  if (!el) { 
-    el = document.createElement('div');
-    if(selector.startsWith('#')) el.id = selector.substring(1);
-    else if(selector.startsWith('.')) el.className = selector.substring(1);
-    document.body.appendChild(el); 
-  }
-  return el;
-};
-// End Evalify Polyfill
 `;
-        content = domInjection + '\n' + content;
+        content = domShim + content;
       }
 
       await writeFile(join(runDir, f.name), content);
@@ -67,28 +84,37 @@ document.querySelector = (selector) => {
     
     let command = '';
     if (lang === 'javascript' || lang === 'js') {
-      // Need to tell node we are running an ES module by linking a package.json in the temp dir, OR we just run the file directly because the parent backend uses ES modules.
-      // Wait, if we use temp dir, Node might not know it's an ES module. We should write a basic package.json.
       await writeFile(join(runDir, 'package.json'), JSON.stringify({ type: 'module' }));
-      
-      command = `node ${mainFile.name}`;
+      command = `node "${mainFile.name}"`;
     } else if (lang === 'python' || lang === 'py') {
-      command = `python ${mainFile.name}`;
+      const pythonCmd = getPythonCommand();
+      command = `${pythonCmd} "${mainFile.name}"`;
     } else {
-      return res.status(400).json({ success: false, error: `Language '${lang}' execution requires a local runtime or an alternative execution API.` });
+      return res.status(400).json({
+        success: false,
+        error: `Language '${lang}' is not supported for local execution. Supported: JavaScript, Python.`
+      });
     }
 
-    // Execute with a generous 5s timeout
-    exec(command, { cwd: runDir, timeout: 5000 }, (error, stdout, stderr) => {
+    // Execute with a 10s timeout (increased from 5s for more complex code)
+    exec(command, { cwd: runDir, timeout: 10000 }, (error, stdout, stderr) => {
       // Cleanup the temporary execution directory immediately after run
       fs.rm(runDir, { recursive: true, force: true }, () => {});
       
-      const code = error ? error.code || 1 : 0;
-      let actualStderr = error && !stderr ? error.message : stderr;
+      const exitCode = error ? (error.code || 1) : 0;
+      let actualStderr = stderr || '';
       
-      // Clean up the polyfill trace
+      // If there was an error and no stderr output, use the error message
+      if (error && !actualStderr) {
+        actualStderr = error.message || '';
+      }
+      
+      // Filter out temp directory paths from error output
       if (actualStderr) {
-        actualStderr = actualStderr.split('\n').filter(line => !line.includes('evalify-run-')).join('\n');
+        actualStderr = actualStderr
+          .split('\n')
+          .filter(line => !line.includes('evalify-run-'))
+          .join('\n');
       }
       
       res.json({
@@ -96,13 +122,16 @@ document.querySelector = (selector) => {
         run: {
           stdout: stdout || '',
           stderr: actualStderr || '',
-          code: code
+          code: exitCode
         }
       });
     });
 
   } catch (error) {
     console.error('Execute Controller Error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error during code execution' });
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Internal server error during code execution'
+    });
   }
 };

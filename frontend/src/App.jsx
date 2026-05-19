@@ -19,7 +19,7 @@ import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useLanguage } from './context/LanguageContext';
 import useSocket from './hooks/useSocket';
-import { Zap, LogOut, User, Sun, Moon, Shield, Bell, Loader, Languages } from 'lucide-react';
+import { Zap, LogOut, User, Sun, Moon, Shield, Bell, Loader, Languages, Menu, X } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -162,6 +162,7 @@ function App() {
   const handleLogout = () => { logout(); setShowUserMenu(false); };
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
 
   return (
     <div className="app-container">

@@ -385,3 +385,149 @@ select.input-field option {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ── Responsive Breakpoints ── */
+
+/* Tablet & below */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  h1 { font-size: 1.6rem !important; }
+  h2 { font-size: 1.3rem !important; }
+
+  /* Disable hover lift on touch devices */
+  .card:hover {
+    transform: none;
+  }
+
+  .btn-primary:hover {
+    transform: none;
+  }
+
+  .terminal-body {
+    padding: 1rem;
+    font-size: 0.8rem;
+  }
+
+  /* Navbar mobile styles */
+  .nav-desktop-links,
+  .nav-desktop-actions {
+    display: none !important;
+  }
+
+  .nav-mobile-toggle {
+    display: flex !important;
+  }
+
+  /* Mobile nav drawer */
+  .mobile-nav-drawer {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-card);
+    z-index: 150;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+  }
+
+  .mobile-nav-link {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 150ms;
+  }
+
+  .mobile-nav-link:hover,
+  .mobile-nav-link.active {
+    color: var(--accent-lavender);
+    background: rgba(124, 111, 247, 0.1);
+  }
+
+  .mobile-nav-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0.5rem 0;
+  }
+
+  /* Grid layouts */
+  div[style*="repeat(auto-fill, minmax(300px, 1fr))"],
+  div[style*="repeat(auto-fit, minmax(300px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Modal responsive */
+  .glass-panel[style*="max-width"] {
+    max-width: calc(100vw - 2rem) !important;
+    margin: 0 1rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  h1 { font-size: 1.4rem !important; }
+  h2 { font-size: 1.15rem !important; }
+
+  .btn-primary {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .terminal-body {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  /* Notification dropdown full-width on small phones */
+  div[style*="width: 320px"] {
+    width: calc(100vw - 2rem) !important;
+    right: -50px !important;
+  }
+}
+
+/* ── Navbar base styles (for JS toggle) ── */
+.nav-desktop-links {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.nav-desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-mobile-toggle {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  flex-shrink: 0;
+}

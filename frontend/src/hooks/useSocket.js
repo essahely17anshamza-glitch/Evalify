@@ -209,22 +209,21 @@ const useSocket = () => {
 
   // Mark notification as read
   const markNotificationRead = (notificationId) => {
-    let target;
-    setNotifications(prev =>
-      prev.map(notif => {
+    setNotifications(prev => {
+      const notif = prev.find(n => n.id === notificationId);
+      // Persist to DB if it's a persistent (DB-backed) notification that isn't already read
+      if (notif?.persistent && !notif.read) {
+        notificationService.markRead(notificationId).catch(err =>
+          console.error('Failed to mark notification as read:', err)
+        );
+      }
+      return prev.map(notif => {
         if (notif.id === notificationId) {
-          target = notif;
           return { ...notif, read: true };
         }
         return notif;
-      })
-    );
-    // Persist to DB if it's a DB notification
-    if (target?.persistent && !target.read) {
-      notificationService.markRead(notificationId).catch(err =>
-        console.error('Failed to mark notification as read:', err)
-      );
-    }
+      });
+    });
   };
 
   // Clear all notifications (also clears persisted ones from DB)

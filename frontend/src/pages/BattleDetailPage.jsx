@@ -88,7 +88,12 @@ const BattleDetailPage = ({ setLogoStatus }) => {
   // Initialize codeFiles when challenge language is known
   useEffect(() => {
     if (battle?.challenge?.language && codeFiles.length === 0) {
-      setCodeFiles([{ name: `main.${getExtension(battle.challenge.language)}`, content: t('writeSolutionHere') }]);
+      const lang = battle.challenge.language?.toLowerCase();
+      let placeholder = t('writeSolutionHere');
+      // Strip any existing comment prefix so we can add the correct one
+      placeholder = placeholder.replace(/^\/\/\s*/, '');
+      const comment = lang === 'python' ? '# ' : '// ';
+      setCodeFiles([{ name: `main.${getExtension(battle.challenge.language)}`, content: comment + placeholder }]);
     }
   }, [battle?.challenge?.language, codeFiles.length, t]);
 
